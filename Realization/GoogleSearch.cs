@@ -6,38 +6,33 @@ using Google.Apis.CustomSearchAPI.v1;
 namespace FiorSearchService.Realization;
 
 public record class GoogleSearch : SearchService {
-    public GoogleServiceConfig ServiceConfig { get; init; }
+    public new GoogleServiceConfig ServiceConfig { get; init; }
     public CustomSearchAPIService CustomSearch { get; init; }
 
-    public GoogleSearch(String apiKey, GoogleServiceConfig serviceConfig) {
+    public GoogleSearch(GoogleServiceConfig serviceConfig) {
         ServiceConfig = serviceConfig;
         CustomSearch = new (
             new Google.Apis.Services.BaseClientService.Initializer() { 
-                ApplicationName = "Fior",
-                ApiKey = apiKey
+                ApiKey = ServiceConfig.ApiKey,
             });
     }
 
-    public override async Task Search(string textSearch, ushort matchPercentage = 80) {
+    public override async Task<IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result>?> Search(string textSearch, ushort matchPercentage = 80) {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = this.ServiceConfig.NumPageSize;
+        listRequare.Cx = ServiceConfig.CxId ?? throw new ArgumentNullException(nameof(ServiceConfig.CxId));
         listRequare.Q = textSearch;
 
         var result = await listRequare.ExecuteAsync();
         if (result is null) 
             throw new ArgumentNullException(nameof(result));
-
-        await Task.CompletedTask;
+        return result.Items;
     }
 
     public record struct GoogleServiceConfig {
-        public UInt16 NumPageSize { get; set; }
-    }
-}
-
-public static class Tests {
-    public static async Task Test() {
-        SearchService googleService = new GoogleSearch(Resources.Resources.GoogleApiKey);
-        await googleService.Search("хуй");
+        public String? CxId { get; set; }
+        public String? OAuth2 { get; set; } 
+        public String? ApiKey { get; set; }
+        public UInt16? NumPageSize { get; set; }
     }
 }

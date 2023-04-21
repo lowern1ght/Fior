@@ -1,7 +1,6 @@
 ﻿namespace FiorSearchService;
 
 public abstract record class SearchService {
-    public String? ApiKey { get; set; }
-
-    public abstract async Task Search(String textSearch, UInt16 matchPercentage = 80);
+    public virtual Object ServiceConfig { get; init; }
+    public abstract Task Search(String textSearch, UInt16 matchPercentage = 80);
 }
