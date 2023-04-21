@@ -14,7 +14,7 @@ public record class ItemPosition {
     public String Description { get; init; }
     public Dictionary<String, String> AdditionalInfo { get; set; } //Rus localization ಥ_ಥ
 
-    public ItemPosition(Guid guid, string brand, string article, string fullName, string description, Dictionary<String,String> additionalInfo) {
+    public ItemPosition(Guid guid, string article, string fullName, string description, Dictionary<String,String> additionalInfo) {
         this.Guid = guid; this.Article = article; this.FullName = fullName; this.Description = description; this.AdditionalInfo = additionalInfo;
     }
 
