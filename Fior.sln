@@ -5,7 +5,7 @@ VisualStudioVersion = 17.5.33530.505
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FiorSearchService", "FiorSearchService.csproj", "{D95D7215-D5E2-4564-8A13-24BC8CC384AD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FiorSearchServiceUnitTests", "..\FiorSearchServiceUnitTests\FiorSearchServiceUnitTests.csproj", "{720500DA-A6C5-4506-A1D3-19EB531E7666}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FiorConsole", "..\FiorConsole\FiorConsole.csproj", "{3343AE57-EB1B-4436-A688-DF1F92660359}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +17,10 @@ Global
 		{D95D7215-D5E2-4564-8A13-24BC8CC384AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D95D7215-D5E2-4564-8A13-24BC8CC384AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D95D7215-D5E2-4564-8A13-24BC8CC384AD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{720500DA-A6C5-4506-A1D3-19EB531E7666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{720500DA-A6C5-4506-A1D3-19EB531E7666}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{720500DA-A6C5-4506-A1D3-19EB531E7666}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{720500DA-A6C5-4506-A1D3-19EB531E7666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3343AE57-EB1B-4436-A688-DF1F92660359}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3343AE57-EB1B-4436-A688-DF1F92660359}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3343AE57-EB1B-4436-A688-DF1F92660359}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3343AE57-EB1B-4436-A688-DF1F92660359}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
