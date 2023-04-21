@@ -17,7 +17,7 @@ public record class GoogleSearch : SearchService {
             });
     }
 
-    public override async Task<IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result>?> Search(string textSearch, ushort matchPercentage = 80) {
+    public override async Task<IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result>?> SearchAsync(string textSearch) {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = this.ServiceConfig.NumPageSize;
         listRequare.Cx = ServiceConfig.CxId ?? throw new ArgumentNullException(nameof(ServiceConfig.CxId));
