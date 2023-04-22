@@ -13,7 +13,11 @@ public record class GoogleSearch : SearchService {
             });
     }
 
-    public override async Task<IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result>?> SearchAsync(string textSearch) {
+    /// <summary>Get item list before search in google service</summary>
+    /// <param name="textSearch"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public override async Task<IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result>?> GetReultAsync(string textSearch) {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = ServiceConfig.ElementCount;
         listRequare.Cx = ServiceConfig.Cx ?? throw new ArgumentNullException(nameof(ServiceConfig.Cx));
@@ -23,5 +27,20 @@ public record class GoogleSearch : SearchService {
         if (result is null)
             throw new ArgumentNullException(nameof(result));
         return result.Items;
+    }
+
+    public async Task<IEnumerable<Uri>> GetUriImagesAsync(IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result> items) {
+        List<Uri> images = new List<Uri>();
+        foreach (var item in items) {
+            
+        }
+
+        throw new NotImplementedException();
+    }
+
+
+    public record class PossibleAttributesProduct { 
+        public IEnumerable<Uri> UriImages { get; init; } = new List<Uri>();
+        public IEnumerable<String> Text { get; init; } = new List<String>();
     }
 }
