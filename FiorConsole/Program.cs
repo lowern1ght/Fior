@@ -14,7 +14,9 @@ namespace FiorConsole {
         }
 
         private static async Task WriteHeader() {
-            await Console.Out.WriteLineAsync(Resources.ConsoleResources.ANSIHeader.Pastel(System.Drawing.Color.Black) 
+            await Console.Out.WriteLineAsync(
+                Environment.NewLine +
+                Resources.ConsoleResources.ANSIHeader.Pastel(System.Drawing.Color.DimGray) 
                 + Environment.NewLine);
         }
 
