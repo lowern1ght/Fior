@@ -35,11 +35,6 @@ public record class GoogleSearch : SearchService {
     }
 
     public async Task<IEnumerable<Uri>> GetUriImagesAsync(IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result> items) {
-        List<Uri> images = new List<Uri>();
-        foreach (var item in items) {
-            
-        }
-
         throw new NotImplementedException();
     }
 
