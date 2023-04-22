@@ -1,7 +1,9 @@
-﻿using Serilog;
-using FiorSearchService;
+﻿using System.Drawing;
 using FiorSearchService.Realization;
+using Serilog;
 using Pastel;
+using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace FiorConsole {
     internal class Program {
@@ -14,9 +16,7 @@ namespace FiorConsole {
         }
 
         private static async Task WriteHeader() {
-            await Console.Out.WriteLineAsync(
-                Environment.NewLine +
-                Resources.ConsoleResources.ANSIHeader.Pastel(System.Drawing.Color.DimGray) 
+            await Console.Out.WriteLineAsync(Resources.ConsoleResources.ANSIHeader.Pastel(Color.DimGray) 
                 + Environment.NewLine);
         }
 
@@ -40,9 +40,16 @@ namespace FiorConsole {
 
             Console.Clear();
             var result = await service.SearchAsync(answer);
-            if (result is not null) Parallel.ForEach(result, async d => 
-                await Console.Out.WriteLineAsync($"Title: [{d.Title.Pastel(System.Drawing.Color.BlueViolet)}] [{d.Snippet.Pastel(ConsoleColor.Gray)}]"));
-            else throw new ArgumentNullException(nameof(result));
+            if (result is null) {
+                Log.Error("Result response is {0}", null);
+                Environment.Exit(0);
+            }
+
+            foreach (var element in result) {
+                await Console.Out.WriteAsync(" - " + element.Title.Pastel(Color.BlueViolet)
+                    + Environment.NewLine + "   [" + element.DisplayLink.Pastel(Color.PaleVioletRed) + "], Description: " + element.Snippet 
+                    + Environment.NewLine);
+            }
         }
     }
 }
