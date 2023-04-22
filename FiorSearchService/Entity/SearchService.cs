@@ -1,18 +1,12 @@
-﻿namespace FiorSearchService;
+﻿namespace FiorSearchService.Interfaces;
 
 public abstract record class SearchService {
     public virtual SearchServiceConfig ServiceConfig { get; init; }
 
-    public virtual Task SearchAsync(String textSearch)
+    public virtual Task SearchAsync(string textSearch)
         => throw new NotImplementedException();
 
     public SearchService(SearchServiceConfig serviceConfig) {
         ServiceConfig = serviceConfig;
     }
-}
-
-public record class SearchServiceConfig {
-    public String? Cx { get; set; }
-    public String? ApiKey { get; set; }
-    public UInt16? ElementCount { get; set; }
 }

@@ -1,9 +1,7 @@
 ﻿using System.Drawing;
-using FiorSearchService.Realization;
+using FiorSearchService;
 using Serilog;
 using Pastel;
-using System.Text.RegularExpressions;
-using System.Diagnostics;
 
 namespace FiorConsole {
     internal class Program {
@@ -43,12 +41,6 @@ namespace FiorConsole {
             if (result is null) {
                 Log.Error("Result response is {0}", null);
                 Environment.Exit(0);
-            }
-
-            foreach (var element in result) {
-                await Console.Out.WriteAsync(" - " + element.Title.Pastel(Color.BlueViolet)
-                    + Environment.NewLine + "   [" + element.DisplayLink.Pastel(Color.PaleVioletRed) + "], Description: " + element.Snippet 
-                    + Environment.NewLine);
             }
         }
     }

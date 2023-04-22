@@ -7,8 +7,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FiorSearchService", "FiorSe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FiorConsole", "FiorConsole\FiorConsole.csproj", "{6D33B3C0-6999-4EA7-9969-D6C8864D9D20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FiorApplication", "FiorApplication\FiorApplication.csproj", "{C10C5B37-94AE-40E7-9F48-E42391850D3F}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{6D33B3C0-6999-4EA7-9969-D6C8864D9D20}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6D33B3C0-6999-4EA7-9969-D6C8864D9D20}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6D33B3C0-6999-4EA7-9969-D6C8864D9D20}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C10C5B37-94AE-40E7-9F48-E42391850D3F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C10C5B37-94AE-40E7-9F48-E42391850D3F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C10C5B37-94AE-40E7-9F48-E42391850D3F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C10C5B37-94AE-40E7-9F48-E42391850D3F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
