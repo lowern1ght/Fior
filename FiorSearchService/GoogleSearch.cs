@@ -29,6 +29,11 @@ public record class GoogleSearch : SearchService {
         return result.Items;
     }
 
+    public async Task<PossibleAttributesProduct> GetPossibleAttributesProductAsync() {
+        //TODO: реализовать создание структуры
+        throw new NotImplementedException();
+    }
+
     public async Task<IEnumerable<Uri>> GetUriImagesAsync(IEnumerable<Google.Apis.CustomSearchAPI.v1.Data.Result> items) {
         List<Uri> images = new List<Uri>();
         foreach (var item in items) {
@@ -38,9 +43,8 @@ public record class GoogleSearch : SearchService {
         throw new NotImplementedException();
     }
 
-
-    public record class PossibleAttributesProduct { 
-        public IEnumerable<Uri> UriImages { get; init; } = new List<Uri>();
-        public IEnumerable<String> Text { get; init; } = new List<String>();
+    public record struct PossibleAttributesProduct {
+        public IEnumerable<String> Text { get; init; }
+        public IEnumerable<Uri> UriImages { get; init; }
     }
 }

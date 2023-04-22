@@ -39,7 +39,7 @@ namespace FiorConsole {
             });
 
             Console.Clear();
-            var result = await service.GetReultAsync(answer);   
+            var result = await service.GetReultAsync(answer);
         }
     }
 }
