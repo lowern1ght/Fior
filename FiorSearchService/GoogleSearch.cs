@@ -17,6 +17,8 @@ public record class GoogleSearch : SearchService {
     public CustomSearchAPIService CustomSearch { get; init; }
 
     private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
+    private readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
+
 
     public GoogleSearch(SearchServiceConfig serviceConfig) : base(serviceConfig) {
         HttpClient = new HttpClient();
@@ -69,6 +71,7 @@ public record class GoogleSearch : SearchService {
             .Select((d, i) => d.GetAttribute("src"))
             .Select(s => Uri.TryCreate(s, UriKind.RelativeOrAbsolute, out var uriResult) == true ? uriResult : new Uri(""))
             .Select(u => u.IsAbsoluteUri == false ? new Uri(possibleAttributes.WebAddress, u) : u)
+            .Where(u => ExtensionImage.Any(s => u.AbsolutePath.Contains(s)))
             .ToList();
 
         return possibleAttributes;
