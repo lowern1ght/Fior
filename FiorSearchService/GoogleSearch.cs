@@ -100,7 +100,7 @@ public record class GoogleSearch : SearchService {
                 throw new ArgumentNullException(nameof(response));
             return response;
         } catch (HttpRequestException e) {
-            await LogService.Log(e.Message, LogType.Errored);
+            await LogService.Log(e.Message + @", Url: [{0}]", LogType.Errored, uriWebsite.ToString());
             return null;
         }
     }
