@@ -54,9 +54,12 @@ public record class GoogleSearch : SearchService {
     }
 
     private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item) {
+        if (!Uri.TryCreate(item.FormattedUrl, UriKind.RelativeOrAbsolute, out var uriSite))
+            return null;
+        
         PossibleAttributesProduct possibleAttributes = new() {
-            WebAddress = new Uri(item.FormattedUrl),
-            SiteName = item.Title
+            SiteName = item.Title,
+            WebAddress = uriSite
         };
 
         var response = await GetResponseHtmlFromWebsiteAsync(item.Link);
@@ -86,6 +89,8 @@ public record class GoogleSearch : SearchService {
                 continue;
 
             if (item is string itemprop && itemprop.ToLower() == "description") {
+                var value = domObject.Value;
+                await LogService.Log("Added description: {0}", LogType.Info, value);
                 result.Add(domObject.Value);
             }
         }
@@ -94,6 +99,8 @@ public record class GoogleSearch : SearchService {
     }
 
     private async Task<String?> GetResponseHtmlFromWebsiteAsync(string uriWebsite) {
+        //Todo: Добавить обработку под SSL и добавить защиту SSL, так как большинство сайтов не пропускает без SSL сертифката доступа
+
         try {
             var response = await HttpClient.GetStringAsync(uriWebsite);
             if (response is null)
