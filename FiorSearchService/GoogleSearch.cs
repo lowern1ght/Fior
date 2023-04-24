@@ -1,11 +1,11 @@
-﻿using System.Collections.Concurrent;
-using System.Text.Encodings.Web;
-using System.Text.RegularExpressions;
-using System.Text.Unicode;
-using FiorSearchService.Interfaces;
+﻿using System.Text.RegularExpressions;
 using Google.Apis.CustomSearchAPI.v1;
-using HtmlAgilityPack;
+using System.Collections.Concurrent;
+using FiorSearchService.Interfaces;
+using System.Text.Encodings.Web;
 using Newtonsoft.Json.Linq;
+using System.Text.Unicode;
+using CsQuery;
 
 namespace FiorSearchService;
 
@@ -53,12 +53,19 @@ public record class GoogleSearch : SearchService {
         };
 
         String response = await GetResponseHtmlFromWebsiteAsync(item.Link);
+
         var matchCollection = Regex.Matches(response, PatternImgSrc);
         possibleAttributes.UriImages = matchCollection.Select(s
             => new Uri(s.Value))
                 .ToList();
 
-        return new PossibleAttributesProduct();
+        CQ domObjects = new CQ(response);
+        possibleAttributes.UriImages = domObjects["img"]
+            .Select((d, i) => d.GetAttribute("src"))
+            .Select(s => new Uri(s))
+            .ToList();
+
+        return possibleAttributes;
     }
 
     private async Task<String> GetResponseHtmlFromWebsiteAsync(String uriWebsite) {
