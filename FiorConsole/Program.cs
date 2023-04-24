@@ -3,8 +3,6 @@ using FiorSearchService;
 using Serilog;
 using Pastel;
 
-using static FiorSearchService.Hadlers.SearchResultHadler;
-
 namespace FiorConsole {
     internal class Program {
         private static Task InitializeLogger() {
@@ -40,6 +38,14 @@ namespace FiorConsole {
 
             Console.Clear();
             var result = await service.GetReultAsync(answer);
+            if (result is null)
+                throw new ArgumentNullException(nameof(result));
+            Parallel.ForEach(result, x => Console.WriteLine(x.HtmlTitle));
+
+            var pos = await service.GetPossibleAttributesProductAsync(result);
+            foreach (var attr in pos) {
+                Console.WriteLine(attr?.SiteName);
+            }
         }
     }
 }
