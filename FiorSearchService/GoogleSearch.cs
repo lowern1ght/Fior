@@ -1,19 +1,17 @@
-﻿using System.Text.RegularExpressions;
+﻿using Google.Apis.CustomSearchAPI.v1.Data;
 using Google.Apis.CustomSearchAPI.v1;
-using System.Collections.Concurrent;
 using FiorSearchService.Interfaces;
-using System.Text.Encodings.Web;
+using FiorSearchService.Entity;
 using Newtonsoft.Json.Linq;
-using System.Text.Unicode;
 using CsQuery;
-using CsQuery.ExtensionMethods.Internal;
-using CsQuery.ExtensionMethods;
-using Google.Apis.CustomSearchAPI.v1.Data;
+using FiorSearchService.Modules;
 
 namespace FiorSearchService;
 
 public record class GoogleSearch : SearchService {
     private HttpClient HttpClient { get; init; }
+    private LogService LogService { get; init; }
+
     public CustomSearchAPIService CustomSearch { get; init; }
 
     private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
@@ -22,6 +20,7 @@ public record class GoogleSearch : SearchService {
 
     public GoogleSearch(SearchServiceConfig serviceConfig) : base(serviceConfig) {
         HttpClient = new HttpClient();
+        LogService = new LogService(LoggingTo.Console);
         CustomSearch = new(
             new Google.Apis.Services.BaseClientService.Initializer() {
                 ApiKey = ServiceConfig.ApiKey,
@@ -32,7 +31,7 @@ public record class GoogleSearch : SearchService {
     /// <param name="textSearch"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public override async Task<IList<Google.Apis.CustomSearchAPI.v1.Data.Result>?> GetReultAsync(string textSearch) {
+    public override async Task<IList<Result>?> GetReultAsync(string textSearch) {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = ServiceConfig.ElementCount;
         listRequare.Cx = ServiceConfig.Cx ?? throw new ArgumentNullException(nameof(ServiceConfig.Cx));
@@ -44,21 +43,23 @@ public record class GoogleSearch : SearchService {
         return result.Items;
     }
 
-    public async Task<IEnumerable<PossibleAttributesProduct?>> GetPossibleAttributesProductAsync(IList<Google.Apis.CustomSearchAPI.v1.Data.Result> items) {
+    public async Task<IEnumerable<PossibleAttributesProduct?>> GetPossibleAttributesProductAsync(IList<Result> items) {
+        var result = new List<PossibleAttributesProduct?>();
         foreach (var item in items) {
-            var result = await CompletePossibleAttributesProductAsync(item);
+            var possible = await CompletePossibleAttributesProductAsync(item);
+            if (possible != null) { result.Add(possible); }
         }
 
-        throw new NotImplementedException();
+        return result;
     }
 
-    private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Google.Apis.CustomSearchAPI.v1.Data.Result item) {
+    private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item) {
         PossibleAttributesProduct possibleAttributes = new() {
             WebAddress = new Uri(item.FormattedUrl),
             SiteName = item.Title
         };
 
-        String response = await GetResponseHtmlFromWebsiteAsync(item.Link);
+        var response = await GetResponseHtmlFromWebsiteAsync(item.Link);
         CQ domObjects = new CQ(response);
 
         var aboutProduct = new AboutProduct() {
@@ -78,13 +79,13 @@ public record class GoogleSearch : SearchService {
     }
 
     private async Task<List<String>> GetInvariantsDescriptionsAsync(CQ domObjects) {
-        List<String> result = new List<String>();
+        List<string> result = new List<string>();
         foreach (var domObject in domObjects["div"]) {
             var item = domObject.GetAttribute("itemprop");
             if (item is null)
                 continue;
 
-            if (item is String itemprop && itemprop.ToLower() == "description") {
+            if (item is string itemprop && itemprop.ToLower() == "description") {
                 result.Add(domObject.Value);
             }
         }
@@ -92,26 +93,19 @@ public record class GoogleSearch : SearchService {
         return result;
     }
 
-    private async Task<String> GetResponseHtmlFromWebsiteAsync(String uriWebsite) {
-        var response = await HttpClient.GetStringAsync(uriWebsite);
-        if (response is null)
-            throw new ArgumentNullException(nameof(response));
-        return response;
+    private async Task<String?> GetResponseHtmlFromWebsiteAsync(string uriWebsite) {
+        try {
+            var response = await HttpClient.GetStringAsync(uriWebsite);
+            if (response is null)
+                throw new ArgumentNullException(nameof(response));
+            return response;
+        } catch (HttpRequestException e) {
+            await LogService.Log(e.Message, LogType.Errored);
+            return null;
+        }
     }
 
-    private Task<IEnumerable<String>> JTokenToStrings(JArray array) {
+    private Task<IEnumerable<string>> JTokenToStrings(JArray array) {
         throw new NotImplementedException();
-    }
-
-    public record struct PossibleAttributesProduct {
-        public Uri WebAddress { get; set; }
-        public String SiteName { get; init; }
-        public List<Uri> UriImages { get; set; }
-        public AboutProduct AboutProduct { get; set; }
-    }
-
-    public record struct AboutProduct {
-        public List<String> Description { get; set; }
-        public Dictionary<String, IConvertible> Specifity { get; set; }
     }
 }

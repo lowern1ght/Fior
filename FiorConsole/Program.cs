@@ -38,9 +38,6 @@ namespace FiorConsole {
             Parallel.ForEach(result, x => Console.WriteLine(x.HtmlTitle));
 
             var pos = await service.GetPossibleAttributesProductAsync(result);
-            foreach (var attr in pos) {
-                Console.WriteLine(attr?.SiteName);
-            }
         }
     }
 }
