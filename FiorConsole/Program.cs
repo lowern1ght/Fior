@@ -1,15 +1,10 @@
 ﻿using System.Drawing;
 using FiorSearchService;
-using Serilog;
 using Pastel;
 
 namespace FiorConsole {
     internal class Program {
         private static Task InitializeLogger() {
-            Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .MinimumLevel.Debug()
-                .CreateLogger();
             return Task.CompletedTask;
         }
 

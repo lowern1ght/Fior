@@ -55,9 +55,11 @@ public record class GoogleSearch : SearchService {
         String response = await GetResponseHtmlFromWebsiteAsync(item.Link);
 
         var matchCollection = Regex.Matches(response, PatternImgSrc);
-        possibleAttributes.UriImages = matchCollection.Select(s
-            => new Uri(s.Value))
-                .ToList();
+        possibleAttributes.UriImages = matchCollection
+            .Select(s 
+                => Uri.TryCreate(s.Groups[1].Value, UriKind.RelativeOrAbsolute, out var uriResult) == true ? uriResult : null)
+            .Where(s => s is not null)
+            .ToList();
 
         CQ domObjects = new CQ(response);
         possibleAttributes.UriImages = domObjects["img"]
