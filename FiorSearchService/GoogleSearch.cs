@@ -27,6 +27,10 @@ public record class GoogleSearch : SearchService {
             DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
         };
 
+        var cookie = new Cookie() {
+            
+        }
+
         HttpClientHandler = new HttpClientHandler() {
             CookieContainer = new CookieContainer()
         };
