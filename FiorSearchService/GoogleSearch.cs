@@ -24,8 +24,7 @@ public record class GoogleSearch : SearchService {
 
     public GoogleSearch(SearchServiceConfig serviceConfig) : base(serviceConfig) {
         HttpClient = new HttpClient() {
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
-            Timeout = new TimeSpan(9000)
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
         };
 
         HttpClientHandler = new HttpClientHandler() {
@@ -114,6 +113,7 @@ public record class GoogleSearch : SearchService {
         try {
             var request = new HttpRequestMessage(HttpMethod.Get, uriWebsite) { };
             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
             request.Headers.Add("User-Agent",
                 @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59");
 
