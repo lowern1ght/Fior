@@ -1,15 +1,19 @@
 ﻿using Google.Apis.CustomSearchAPI.v1.Data;
 using Google.Apis.CustomSearchAPI.v1;
 using FiorSearchService.Interfaces;
-using FiorSearchService.Entity;
-using Newtonsoft.Json.Linq;
-using CsQuery;
 using FiorSearchService.Modules;
+using FiorSearchService.Entity;
+using System.Net.Http.Headers;
+using Newtonsoft.Json.Linq;
+using System.Net;
+using CsQuery;
 
 namespace FiorSearchService;
 
 public record class GoogleSearch : SearchService {
     private HttpClient HttpClient { get; init; }
+    private HttpClientHandler HttpClientHandler { get; init; }
+
     private LogService LogService { get; init; }
 
     public CustomSearchAPIService CustomSearch { get; init; }
@@ -19,7 +23,16 @@ public record class GoogleSearch : SearchService {
 
 
     public GoogleSearch(SearchServiceConfig serviceConfig) : base(serviceConfig) {
-        HttpClient = new HttpClient();
+        HttpClient = new HttpClient() {
+            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower,
+            Timeout = new TimeSpan(9000)
+        };
+
+        HttpClientHandler = new HttpClientHandler() {
+            CookieContainer = new CookieContainer()
+        };
+
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
         LogService = new LogService(LoggingTo.Console);
         CustomSearch = new(
             new Google.Apis.Services.BaseClientService.Initializer() {
@@ -59,7 +72,11 @@ public record class GoogleSearch : SearchService {
             SiteName = item.Title
         };
 
-        var response = await GetResponseHtmlFromWebsiteAsync(item.Link);
+        if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out var itemLink) && itemLink is null) {
+            return null;
+        }
+
+        var response = await GetResponseHtmlFromWebsiteAsync(itemLink);
         CQ domObjects = new CQ(response);
 
         var aboutProduct = new AboutProduct() {
@@ -93,13 +110,29 @@ public record class GoogleSearch : SearchService {
         return result;
     }
 
-    private async Task<String?> GetResponseHtmlFromWebsiteAsync(string uriWebsite) {
+    private async Task<String?> GetResponseHtmlFromWebsiteAsync(Uri uriWebsite) {
         try {
-            var response = await HttpClient.GetStringAsync(uriWebsite);
-            if (response is null)
-                throw new ArgumentNullException(nameof(response));
-            return response;
-        } catch (HttpRequestException e) {
+            var request = new HttpRequestMessage(HttpMethod.Get, uriWebsite) { };
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
+            request.Headers.Add("User-Agent",
+                @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59");
+
+            var responseMessage = await HttpClient.SendAsync(request);
+            if (!responseMessage.IsSuccessStatusCode && 
+                HttpClientHandler.CookieContainer.GetCookies(uriWebsite).Count > 0 ) {
+
+                responseMessage = await HttpClient.SendAsync(request);
+                if (responseMessage.IsSuccessStatusCode) {
+                    return await responseMessage.Content.ReadAsStringAsync();
+                } else {
+                    await LogService.Log("Response not successed", LogType.Errored);
+                    return null;
+                }
+            }
+
+            return await responseMessage.Content.ReadAsStringAsync();
+        } 
+        catch (HttpRequestException e) {
             await LogService.Log(e.Message, LogType.Errored);
             return null;
         }

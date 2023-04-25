@@ -35,8 +35,6 @@ namespace FiorConsole {
             var result = await service.GetReultAsync(answer);
             if (result is null)
                 throw new ArgumentNullException(nameof(result));
-            Parallel.ForEach(result, x => Console.WriteLine(x.HtmlTitle));
-
             var pos = await service.GetPossibleAttributesProductAsync(result);
         }
     }
