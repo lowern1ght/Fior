@@ -3,39 +3,25 @@ using Google.Apis.CustomSearchAPI.v1;
 using FiorSearchService.Interfaces;
 using FiorSearchService.Modules;
 using FiorSearchService.Entity;
-using System.Net.Http.Headers;
 using Newtonsoft.Json.Linq;
-using System.Net;
 using CsQuery;
+
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Edge;
 
 namespace FiorSearchService;
 
 public record class GoogleSearch : SearchService {
-    private HttpClient HttpClient { get; init; }
-    private HttpClientHandler HttpClientHandler { get; init; }
-
     private LogService LogService { get; init; }
-
+    private EdgeDriver EdgeDriver { get; init; }
     public CustomSearchAPIService CustomSearch { get; init; }
 
-    private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
     private readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
-
+    private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
 
     public GoogleSearch(SearchServiceConfig serviceConfig) : base(serviceConfig) {
-        HttpClient = new HttpClient() {
-            DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower
-        };
-
-        var cookie = new Cookie() {
-
-        };
-
-        HttpClientHandler = new HttpClientHandler() {
-            CookieContainer = new CookieContainer()
-        };
-
-        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+        this.EdgeDriver = new EdgeDriver() { };
         LogService = new LogService(LoggingTo.Console);
         CustomSearch = new(
             new Google.Apis.Services.BaseClientService.Initializer() {
@@ -82,7 +68,7 @@ public record class GoogleSearch : SearchService {
             return null;
         }
 
-        var response = await GetResponseHtmlFromWebsiteAsync(itemLink);
+        var response = await GetResponseHtmlFromWebsite(itemLink);
         CQ domObjects = new CQ(response);
 
         var aboutProduct = new AboutProduct() {
@@ -110,7 +96,7 @@ public record class GoogleSearch : SearchService {
 
             if (item is string itemprop && itemprop.ToLower() == "description") {
                 var value = domObject.Value;
-                await LogService.Log("Added description: {0}", LogType.Info, value);
+                await LogService.Log("Added description: {0}", Modules.LogType.Info, value);
                 result.Add(domObject.Value);
             }
         }
@@ -118,31 +104,13 @@ public record class GoogleSearch : SearchService {
         return result;
     }
 
-    private async Task<String?> GetResponseHtmlFromWebsiteAsync(Uri uriWebsite) {
+    private async Task<String?> GetResponseHtmlFromWebsite(Uri uriWebsite) {
         try {
-            var request = new HttpRequestMessage(HttpMethod.Get, uriWebsite) { };
-            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
-            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            request.Headers.Add("User-Agent",
-                @"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59");
-
-            var responseMessage = await HttpClient.SendAsync(request);
-            if (!responseMessage.IsSuccessStatusCode && 
-                HttpClientHandler.CookieContainer.GetCookies(uriWebsite).Count > 0 ) {
-
-                responseMessage = await HttpClient.SendAsync(request);
-                if (responseMessage.IsSuccessStatusCode) {
-                    return await responseMessage.Content.ReadAsStringAsync();
-                } else {
-                    await LogService.Log("Response not successed", LogType.Errored);
-                    return null;
-                }
-            }
-
-            return await responseMessage.Content.ReadAsStringAsync();
-        } 
-        catch (HttpRequestException e) {
-            await LogService.Log(e.Message, LogType.Errored);
+            EdgeDriver.Navigate().GoToUrl(uriWebsite);
+            return EdgeDriver.PageSource;
+        }
+        catch (WebDriverException ex) {
+            await LogService.Log(ex.Message, Modules.LogType.Errored, ex);
             return null;
         }
     }

@@ -25,13 +25,13 @@ namespace FiorConsole {
                 Environment.Exit(0);
             }
 
+            Console.Clear();
             var service = new GoogleSearch(new() {
                 ApiKey = "AIzaSyDBRc-mwzyEgSpc0fq1nWbUmKQH_ZOQimY",
                 Cx = "b0edae207179a4dd3",
                 ElementCount = 10,
             });
 
-            Console.Clear();
             var result = await service.GetReultAsync(answer);
             if (result is null)
                 throw new ArgumentNullException(nameof(result));
