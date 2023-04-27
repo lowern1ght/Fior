@@ -1,32 +1,24 @@
-﻿using Google.Apis.CustomSearchAPI.v1.Data;
-using Google.Apis.CustomSearchAPI.v1;
+﻿using CsQuery;
+using CsQuery.ExtensionMethods;
+using FiorSearchService.Entity;
 using FiorSearchService.Interfaces;
 using FiorSearchService.Modules;
-using FiorSearchService.Entity;
+using Google.Apis.CustomSearchAPI.v1;
+using Google.Apis.CustomSearchAPI.v1.Data;
 using Newtonsoft.Json.Linq;
-using CsQuery;
-
-using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Edge;
-using System.Runtime.InteropServices;
 using OpenQA.Selenium.Firefox;
-using CsQuery.ExtensionMethods;
 
 namespace FiorSearchService;
 
-public record class GoogleSearch : SearchService {
+public record class GoogleSearch : SearchService, IDisposable {
     private LogService LogService { get; init; }
     private IWebDriver WebDriver { get; init; }
     public CustomSearchAPIService CustomSearch { get; init; }
 
     private readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
     private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
-
-    ~GoogleSearch() {
-        WebDriver.Quit();
-        WebDriver.Dispose();
-    }
 
     public GoogleSearch(SearchServiceConfig serviceConfig, IWebDriver? webDriver = null) : base(serviceConfig) {
         LogService = new LogService(LoggingTo.Console);
@@ -43,7 +35,7 @@ public record class GoogleSearch : SearchService {
                         serviceFirefox.HideCommandPromptWindow = true;
 
                         optionFirefox.AddArgument(@"--disable-gpu");
-                        optionFirefox.AddArgument(@"--log-level=3" );
+                        optionFirefox.AddArgument(@"--log-level=3");
                         optionFirefox.AddArgument(@"--output=/dev/null");
                         optionFirefox.AddArgument(@"--disable-crash-reporter");
 
@@ -66,14 +58,15 @@ public record class GoogleSearch : SearchService {
                         optionEdge.AddArgument(@"--disable-extensions");
                         optionEdge.AddArgument(@"--disable-crash-reporter");
 
-                        WebDriver = new EdgeDriver(serviceEdge,  optionEdge);
+                        WebDriver = new EdgeDriver(serviceEdge, optionEdge);
                         break;
                     }
                 default: {
                         throw new NotSupportedException();
                     }
             }
-        }
+        } 
+        
         else { WebDriver = webDriver; }
 
         CustomSearch = new(
@@ -111,7 +104,7 @@ public record class GoogleSearch : SearchService {
     private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item) {
         if (!Uri.TryCreate(item.FormattedUrl, UriKind.RelativeOrAbsolute, out var uriSite))
             return null;
-        
+
         PossibleAttributesProduct possibleAttributes = new() {
             SiteName = item.Title,
             WebAddress = uriSite
@@ -125,9 +118,13 @@ public record class GoogleSearch : SearchService {
         CQ domObjects = new CQ(response);
 
         var aboutProduct = new AboutProduct() {
-            Description = await GetInvariantsDescriptionsAsync(domObjects),
             Specifity = new Dictionary<string, IConvertible>()
         };
+
+        aboutProduct.Description = await GetInvariantsDescriptionsAsync(domObjects);
+        Parallel.ForEach(aboutProduct.Description, (x, s, i) => {
+            Console.WriteLine($"Description [{i}] = {x}");
+        });
 
         //Images
         possibleAttributes.UriImages = domObjects["img"]
@@ -140,13 +137,17 @@ public record class GoogleSearch : SearchService {
         return possibleAttributes;
     }
 
-    public async Task AddRecursedValueAsync(IDomObject @object, IList<String> text) {
+    private async Task AddRecursedValueAsync(IDomObject @object, IList<String> text) {
         if (@object.HasChildren) {
             foreach (var node in @object.ChildNodes) {
                 await AddRecursedValueAsync(node, text);
             }
-        } else {
-            text.Add(@object.Value);
+        }
+        else {
+            if (@object.Value is String value) {
+                await LogService.Log("Added description: {0}", Modules.LogType.Info, value);
+                text.Add(value);
+            }
         }
     }
 
@@ -164,20 +165,10 @@ public record class GoogleSearch : SearchService {
                             break;
                         }
                 }
-
-
-
-
-
-                var value = domObject.Value;
-                await LogService.Log("Added description: {0}", Modules.LogType.Info, value);
-                result.Add(domObject.Value);
-            } else {
-                continue;
             }
-        }
 
-        //foreach (var domObject in domObjects["t"])
+            else { continue; }
+        }
 
         return result;
     }
@@ -185,8 +176,9 @@ public record class GoogleSearch : SearchService {
     private async Task<String?> GetResponseHtmlFromWebsite(Uri uriWebsite) {
         try {
             WebDriver.Navigate().GoToUrl(uriWebsite);
+            var resultPage = WebDriver.PageSource;
             await LogService.Log("WebSite: {0}, Status: {Open}", Modules.LogType.Info, uriWebsite.ToString(), "Open");
-            return WebDriver.PageSource;
+            return resultPage;
         }
         catch (WebDriverException ex) {
             await LogService.Log(ex.Message, Modules.LogType.Errored, ex);
@@ -196,5 +188,9 @@ public record class GoogleSearch : SearchService {
 
     private Task<IEnumerable<string>> JTokenToStrings(JArray array) {
         throw new NotImplementedException();
+    }
+
+    public void Dispose() {
+        WebDriver?.Dispose();
     }
 }

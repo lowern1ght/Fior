@@ -33,8 +33,11 @@ namespace FiorConsole {
             });
 
             var result = await service.GetReultAsync(answer);
-            if (result is null)
+            if (result is null) {
+                service.Dispose();
                 throw new ArgumentNullException(nameof(result));
+            }
+                
             var pos = await service.GetPossibleAttributesProductAsync(result);
         }
     }
