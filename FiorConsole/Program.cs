@@ -9,7 +9,7 @@ namespace FiorConsole {
         }
 
         private static async Task WriteHeader() {
-            await Console.Out.WriteLineAsync(Resources.ConsoleResources.ANSIHeader.Pastel(Color.DimGray) 
+            await Console.Out.WriteLineAsync(Resources.ConsoleResources.ASCIIIArt.Pastel(Color.AliceBlue)
                 + Environment.NewLine);
         }
 
