@@ -1,4 +1,5 @@
-﻿using CsQuery;
+﻿using System.Collections;
+using CsQuery;
 using CsQuery.ExtensionMethods;
 using FiorSearchService.Entity;
 using FiorSearchService.Interfaces;
@@ -105,11 +106,6 @@ public record class GoogleSearch : SearchService, IDisposable {
         if (!Uri.TryCreate(item.FormattedUrl, UriKind.RelativeOrAbsolute, out var uriSite))
             return null;
 
-        PossibleAttributesProduct possibleAttributes = new() {
-            SiteName = item.Title,
-            WebAddress = uriSite
-        };
-
         if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out var itemLink) && itemLink is null) {
             return null;
         }
@@ -117,60 +113,41 @@ public record class GoogleSearch : SearchService, IDisposable {
         var response = await GetResponseHtmlFromWebsite(itemLink);
         CQ domObjects = new CQ(response);
 
-        var aboutProduct = new AboutProduct() {
-            Specifity = new Dictionary<string, IConvertible>()
+        //Todo: нахождение propa и изображений
+        PossibleAttributesProduct possibleAttributes = new() {
+            SiteName   = item.Title,
+            WebAddress = uriSite,
+            AboutProduct = new AboutProduct() {
+                Description = await GetDescriptionProductAsync(domObjects),
+                Specifity   = await GetSpecifityProductAsync(domObjects)
+            }
         };
 
-        aboutProduct.Description = await GetInvariantsDescriptionsAsync(domObjects);
-        Parallel.ForEach(aboutProduct.Description, (x, s, i) => {
-            Console.WriteLine($"Description [{i}] = {x}");
-        });
-
-        //Images
-        possibleAttributes.UriImages = domObjects["img"]
-            .Select((d, i) => d.GetAttribute("src"))
-            .Select(s => Uri.TryCreate(s, UriKind.RelativeOrAbsolute, out var uriResult) == true ? uriResult : new Uri(""))
-            .Select(u => u.IsAbsoluteUri == false ? new Uri(possibleAttributes.WebAddress, u) : u)
-            .Where(u => ExtensionImage.Any(s => u.AbsolutePath.Contains(s)))
-            .ToList();
 
         return possibleAttributes;
     }
 
-    private async Task AddRecursedValueAsync(IDomObject @object, IList<String> text) {
-        if (@object.HasChildren) {
-            foreach (var node in @object.ChildNodes) {
-                await AddRecursedValueAsync(node, text);
-            }
-        }
-        else {
-            if (@object.Value is String value) {
-                await LogService.Log("Added description: {0}", Modules.LogType.Info, value);
-                text.Add(value);
-            }
-        }
+    private async Task<List<String>> GetDescriptionProductAsync(CQ domObjects) {
+        var description = new List<String>();
+
+        return description;
     }
 
-    private async Task<List<String>> GetInvariantsDescriptionsAsync(CQ domObjects) {
-        List<string> result = new List<string>();
-        foreach (var domObject in domObjects["div"]) {
-            var item = domObject.GetAttribute("itemprop");
-            if (item is null)
-                continue;
+    private async Task<Dictionary<String, IConvertible>> GetSpecifityProductAsync(CQ domObjects) {
+        var specifity = new Dictionary<String, IConvertible>();
 
-            if (item is string itemprop && itemprop.ToLower() == "description") {
-                switch (itemprop.ToLower()) {
-                    case "description": {
-                            await AddRecursedValueAsync(domObject, result);
-                            break;
-                        }
-                }
-            }
+        //find atribute itemtype
+        var @div = domObjects["div"];
+        foreach (var itemDiv in @div) {
 
-            else { continue; }
+
+
         }
 
-        return result;
+
+
+
+        return specifity;
     }
 
     private async Task<String?> GetResponseHtmlFromWebsite(Uri uriWebsite) {

@@ -5,7 +5,9 @@ namespace FiorSearchService.Modules;
 
 public class LogService {
 
-    public async Task Log(Object message, LogType type, params object[] objects) {        
+    public async Task Log(Object message, LogType type, params object[] objects) {
+        return;
+        
         switch(type) {
             case LogType.Errored:
                 Serilog.Log.Error(message as String, objects);

@@ -8,14 +8,11 @@ namespace FiorConsole {
             return Task.CompletedTask;
         }
 
-        private static async Task WriteHeader() {
-            await Console.Out.WriteLineAsync(Resources.ConsoleResources.ANSIHeader.Pastel(Color.DimGray) 
-                + Environment.NewLine);
-        }
-
         static async Task Main() {
             await InitializeLogger();
-            await WriteHeader();
+
+            //Write Header
+            await Visual.WriteHeaderAsync();
 
             await Console.Out.WriteAsync("  Write search string: ".Pastel(ConsoleColor.Gray) 
                 + Environment.NewLine + "    > ".Pastel(ConsoleColor.Green));
@@ -25,7 +22,6 @@ namespace FiorConsole {
                 Environment.Exit(0);
             }
 
-            Console.Clear();
             var service = new GoogleSearch(new() {
                 ApiKey = "AIzaSyDBRc-mwzyEgSpc0fq1nWbUmKQH_ZOQimY",
                 Cx = "b0edae207179a4dd3",
@@ -37,8 +33,14 @@ namespace FiorConsole {
                 service.Dispose();
                 throw new ArgumentNullException(nameof(result));
             }
+
+            await Visual.WriteHeaderAsync(answer);
+            foreach (var item in result) {
+                await Visual.WriteWebsiteAsync(item.DisplayLink, item.Link, "Find");
+            }
                 
             var pos = await service.GetPossibleAttributesProductAsync(result);
+            service.Dispose();
         }
     }
 }
