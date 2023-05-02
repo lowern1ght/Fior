@@ -36,7 +36,7 @@ namespace FiorConsole {
 
             await Visual.WriteHeaderAsync(answer);
             foreach (var item in result) {
-                await Visual.WriteWebsiteAsync(item.DisplayLink, item.Link, "Find");
+                await Visual.WriteWebsiteAsync(item.DisplayLink, item.Link);
             }
                 
             var pos = await service.GetPossibleAttributesProductAsync(result);

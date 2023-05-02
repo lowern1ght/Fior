@@ -8,72 +8,102 @@ using Google.Apis.CustomSearchAPI.v1;
 using Google.Apis.CustomSearchAPI.v1.Data;
 using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
 
 namespace FiorSearchService;
 
+public enum WebDriverType {
+    FireFox,
+    Chrome,
+    Edge
+}
+
 public record class GoogleSearch : SearchService, IDisposable {
-    private LogService LogService { get; init; }
     private IWebDriver WebDriver { get; init; }
-    public CustomSearchAPIService CustomSearch { get; init; }
+    private CustomSearchAPIService CustomSearch { get; init; }
 
     private readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
     private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
 
-    public GoogleSearch(SearchServiceConfig serviceConfig, IWebDriver? webDriver = null) : base(serviceConfig) {
-        LogService = new LogService(LoggingTo.Console);
+    private void InitializationWebDriver(WebDriverType driverType) {
 
-        if (webDriver is null) {
-            switch (Environment.OSVersion.Platform) {
-                case PlatformID.Unix: {
-                        var optionFirefox = new FirefoxOptions() {
-                            AcceptInsecureCertificates = true,
-                        };
+    }
 
-                        var serviceFirefox = FirefoxDriverService.CreateDefaultService();
-                        serviceFirefox.SuppressInitialDiagnosticInformation = true;
-                        serviceFirefox.HideCommandPromptWindow = true;
+    /// <summary> Create component google rest api search service </summary>
+    /// <param name="serviceConfig"></param>
+    /// <param name="driverType"></param>
+    /// <exception cref="ArgumentException"></exception>
+    public GoogleSearch(SearchServiceConfig serviceConfig, WebDriverType driverType) : base(serviceConfig) {
+        if (driverType == WebDriverType.FireFox) {
+            // Firefox =>
+            var optionFirefox = new FirefoxOptions() {
+                AcceptInsecureCertificates = true,
+            };
 
-                        optionFirefox.AddArgument(@"--disable-gpu");
-                        optionFirefox.AddArgument(@"--log-level=3");
-                        optionFirefox.AddArgument(@"--output=/dev/null");
-                        optionFirefox.AddArgument(@"--disable-crash-reporter");
+            var serviceFirefox = FirefoxDriverService.CreateDefaultService();
+            serviceFirefox.SuppressInitialDiagnosticInformation = true;
+            serviceFirefox.HideCommandPromptWindow = true;
 
-                        WebDriver = new FirefoxDriver(serviceFirefox, optionFirefox);
-                        break;
-                    }
-                case PlatformID.Win32NT: {
-                        var optionEdge = new EdgeOptions() {
-                            AcceptInsecureCertificates = true,
-                        };
+            optionFirefox.AddArgument(@"--disable-gpu");
+            optionFirefox.AddArgument(@"--log-level=3");
+            optionFirefox.AddArgument(@"--output=/dev/null");
+            optionFirefox.AddArgument(@"--disable-crash-reporter");
 
-                        var serviceEdge = EdgeDriverService.CreateDefaultService();
-                        serviceEdge.SuppressInitialDiagnosticInformation = true;
-                        serviceEdge.HideCommandPromptWindow = true;
-                        serviceEdge.UseVerboseLogging = false;
+            WebDriver = new FirefoxDriver(serviceFirefox, optionFirefox);
+        }
 
-                        optionEdge.AddArgument(@"--disable-gpu");
-                        optionEdge.AddArgument(@"--log-level=3");
-                        optionEdge.AddArgument(@"--output=/dev/null");
-                        optionEdge.AddArgument(@"--disable-extensions");
-                        optionEdge.AddArgument(@"--disable-crash-reporter");
+        if (driverType == WebDriverType.Chrome) {
+            // Google Chrome =>
+            var optionChrome = new ChromeOptions() {
+                PageLoadStrategy = PageLoadStrategy.Default,
+                AcceptInsecureCertificates = true
+            };
 
-                        WebDriver = new EdgeDriver(serviceEdge, optionEdge);
-                        break;
-                    }
-                default: {
-                        throw new NotSupportedException();
-                    }
-            }
-        } 
-        
-        else { WebDriver = webDriver; }
+            var serviceChrome = ChromeDriverService.CreateDefaultService();
+            serviceChrome.SuppressInitialDiagnosticInformation = true;
+            serviceChrome.HideCommandPromptWindow = true;
 
+            optionChrome.AddArgument(@"--disable-gpu");
+            optionChrome.AddArgument(@"--log-level=3");
+            optionChrome.AddArgument(@"--output=/dev/null");
+            optionChrome.AddArgument(@"--disable-extensions");
+            optionChrome.AddArgument(@"--disable-crash-reporter");
+
+            WebDriver = new ChromeDriver(serviceChrome, optionChrome);
+        }
+
+        if (driverType == WebDriverType.Edge) {
+            // Edge =>
+            var optionEdge = new EdgeOptions() {
+                AcceptInsecureCertificates = true,
+            };
+
+            var serviceEdge = EdgeDriverService.CreateDefaultService();
+            serviceEdge.SuppressInitialDiagnosticInformation = true;
+            serviceEdge.HideCommandPromptWindow = true;
+            serviceEdge.UseVerboseLogging = false;
+
+            optionEdge.AddArgument(@"--disable-gpu");
+            optionEdge.AddArgument(@"--log-level=3");
+            optionEdge.AddArgument(@"--output=/dev/null");
+            optionEdge.AddArgument(@"--disable-extensions");
+            optionEdge.AddArgument(@"--disable-crash-reporter");
+
+            WebDriver = new EdgeDriver(serviceEdge, optionEdge);
+        }
+
+        //Без WebDriver'a запускать бессмысленно...
+        if (WebDriver is null) {
+            throw new ArgumentException(nameof(WebDriver));
+        }
+
+        // Google API
         CustomSearch = new(
             new Google.Apis.Services.BaseClientService.Initializer() {
                 ApiKey = ServiceConfig.ApiKey,
-            });
+        });
     }
 
     /// <summary>Get item list before search in google service</summary>
@@ -110,57 +140,43 @@ public record class GoogleSearch : SearchService, IDisposable {
             return null;
         }
 
-        var response = await GetResponseHtmlFromWebsite(itemLink);
+        var response = GetResponseHtmlFromWebsite(itemLink);
         CQ domObjects = new CQ(response);
 
         //Todo: нахождение propa и изображений
         PossibleAttributesProduct possibleAttributes = new() {
             SiteName   = item.Title,
             WebAddress = uriSite,
-            AboutProduct = new AboutProduct() {
-                Description = await GetDescriptionProductAsync(domObjects),
-                Specifity   = await GetSpecifityProductAsync(domObjects)
-            }
+            
         };
 
+        var aboutProduct = await GetAboutProductAsync(domObjects);
+        if (aboutProduct is not null) {
+            possibleAttributes.AboutProduct = aboutProduct.Value;
+        }
 
         return possibleAttributes;
     }
 
-    private async Task<List<String>> GetDescriptionProductAsync(CQ domObjects) {
-        var description = new List<String>();
 
-        return description;
-    }
+    private async ValueTask<AboutProduct?> GetAboutProductAsync(CQ domObjects) {
+        var result = new AboutProduct() { 
+            Specifity = new Dictionary<string, IConvertible>(),
+            Description = new List<string>()
+        };
 
-    private async Task<Dictionary<String, IConvertible>> GetSpecifityProductAsync(CQ domObjects) {
-        var specifity = new Dictionary<String, IConvertible>();
-
-        //find atribute itemtype
         var @div = domObjects["div"];
-        foreach (var itemDiv in @div) {
-
-
+        foreach (var divItem in @div) {
 
         }
 
-
-
-
-        return specifity;
+        return result;
     }
 
-    private async Task<String?> GetResponseHtmlFromWebsite(Uri uriWebsite) {
-        try {
-            WebDriver.Navigate().GoToUrl(uriWebsite);
-            var resultPage = WebDriver.PageSource;
-            await LogService.Log("WebSite: {0}, Status: {Open}", Modules.LogType.Info, uriWebsite.ToString(), "Open");
-            return resultPage;
-        }
-        catch (WebDriverException ex) {
-            await LogService.Log(ex.Message, Modules.LogType.Errored, ex);
-            return null;
-        }
+    private String? GetResponseHtmlFromWebsite(Uri uriWebsite) {
+        WebDriver.Navigate().GoToUrl(uriWebsite);
+        var resultPage = WebDriver.PageSource;
+        return resultPage;
     }
 
     private Task<IEnumerable<string>> JTokenToStrings(JArray array) {
