@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <None Remove="Resources\ANSIHeader.txt" />
-    <None Remove="Resources\ASCIIIArt.txt" />
   </ItemGroup>
 
   <ItemGroup>
@@ -18,9 +17,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\ANSIHeader.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Resources\ASCIIIArt.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>

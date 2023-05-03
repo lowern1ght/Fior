@@ -8,32 +8,23 @@ namespace FiorConsole {
             return Task.CompletedTask;
         }
 
-        private static async Task WriteHeader() {
-            await Console.Out.WriteLineAsync(Resources.ConsoleResources.ASCIIIArt.Pastel(Color.AliceBlue)
-                + Environment.NewLine);
+        private static async Task<String> GetPromiseAsync(String promise) {
+            await Console.Out.WriteAsync(promise.Pastel(ConsoleColor.Gray)
+                + Environment.NewLine + "    > ".Pastel(ConsoleColor.Green));
+            return Console.ReadLine() ?? " ";
         }
 
-        static async Task Main() {
-            await InitializeLogger();
-
-            //Write Header
+        private static async Task Main(string[] args) {
             await Visual.WriteHeaderAsync();
 
-            await Console.Out.WriteAsync("  Write search string: ".Pastel(ConsoleColor.Gray) 
-                + Environment.NewLine + "    > ".Pastel(ConsoleColor.Green));
-            String? answer = Console.ReadLine();
-            if (answer is null) {
-                await Console.Out.WriteLineAsync("Answer".Pastel(ConsoleColor.DarkRed) + " is empty string!");
-                Environment.Exit(0);
-            }
-
+            String answer = await GetPromiseAsync("  Write search string: ");
             var service = new GoogleSearch(new() {
                 ApiKey = "AIzaSyDBRc-mwzyEgSpc0fq1nWbUmKQH_ZOQimY",
                 Cx = "b0edae207179a4dd3",
                 ElementCount = 10,
             });
 
-            var result = await service.GetReultAsync(answer);
+            var result = await service.GetResultAsync(answer);
             if (result is null) {
                 service.Dispose();
                 throw new ArgumentNullException(nameof(result));
@@ -41,9 +32,9 @@ namespace FiorConsole {
 
             await Visual.WriteHeaderAsync(answer);
             foreach (var item in result) {
-                await Visual.WriteWebsiteAsync(item.DisplayLink, item.Link, "Find");
+                await Visual.WriteWebsiteAsync(item.Title, item.Link);
             }
-                
+
             var pos = await service.GetPossibleAttributesProductAsync(result);
             service.Dispose();
         }

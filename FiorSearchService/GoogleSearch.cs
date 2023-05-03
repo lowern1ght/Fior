@@ -8,6 +8,7 @@ using Google.Apis.CustomSearchAPI.v1;
 using Google.Apis.CustomSearchAPI.v1.Data;
 using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
 
@@ -44,29 +45,28 @@ public record class GoogleSearch : SearchService, IDisposable {
                         break;
                     }
                 case PlatformID.Win32NT: {
-                        var optionEdge = new EdgeOptions() {
+                        var optionChrome = new ChromeOptions() {
                             AcceptInsecureCertificates = true,
                         };
 
-                        var serviceEdge = EdgeDriverService.CreateDefaultService();
-                        serviceEdge.SuppressInitialDiagnosticInformation = true;
-                        serviceEdge.HideCommandPromptWindow = true;
-                        serviceEdge.UseVerboseLogging = false;
+                        var serviceChrome = ChromeDriverService.CreateDefaultService();
+                        serviceChrome.SuppressInitialDiagnosticInformation = true;
+                        serviceChrome.HideCommandPromptWindow = true;
 
-                        optionEdge.AddArgument(@"--disable-gpu");
-                        optionEdge.AddArgument(@"--log-level=3");
-                        optionEdge.AddArgument(@"--output=/dev/null");
-                        optionEdge.AddArgument(@"--disable-extensions");
-                        optionEdge.AddArgument(@"--disable-crash-reporter");
+                        optionChrome.AddArgument(@"--disable-gpu");
+                        optionChrome.AddArgument(@"--log-level=3");
+                        optionChrome.AddArgument(@"--output=/dev/null");
+                        optionChrome.AddArgument(@"--disable-extensions");
+                        optionChrome.AddArgument(@"--disable-crash-reporter");
 
-                        WebDriver = new EdgeDriver(serviceEdge, optionEdge);
+                        WebDriver = new ChromeDriver(serviceChrome, optionChrome);
                         break;
                     }
                 default: {
                         throw new NotSupportedException();
                     }
             }
-        } 
+        }
         
         else { WebDriver = webDriver; }
 
@@ -80,7 +80,7 @@ public record class GoogleSearch : SearchService, IDisposable {
     /// <param name="textSearch"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public override async Task<IList<Result>?> GetReultAsync(string textSearch) {
+    public override async Task<IList<Result>?> GetResultAsync(string textSearch) {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = ServiceConfig.ElementCount;
         listRequare.Cx = ServiceConfig.Cx ?? throw new ArgumentNullException(nameof(ServiceConfig.Cx));
@@ -140,12 +140,7 @@ public record class GoogleSearch : SearchService, IDisposable {
         var @div = domObjects["div"];
         foreach (var itemDiv in @div) {
 
-
-
         }
-
-
-
 
         return specifity;
     }
