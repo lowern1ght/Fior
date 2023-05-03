@@ -22,7 +22,7 @@ namespace FiorConsole {
                 ApiKey = "AIzaSyDBRc-mwzyEgSpc0fq1nWbUmKQH_ZOQimY",
                 Cx = "b0edae207179a4dd3",
                 ElementCount = 10,
-            });
+            }, WebDriverType.Chrome);
 
             var result = await service.GetResultAsync(answer);
             if (result is null) {
