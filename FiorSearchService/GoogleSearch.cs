@@ -102,7 +102,7 @@ public class GoogleSearch : SearchService, IDisposable {
     /// <param name="textSearch"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public override async Task<IList<Result>?> GetReultAsync(string textSearch) {
+    public override async Task<IList<Result>?> GetResultAsync(string textSearch) {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = ServiceConfig.ElementCount;
         listRequare.Cx = ServiceConfig.Cx ?? throw new ArgumentNullException(nameof(ServiceConfig.Cx));
