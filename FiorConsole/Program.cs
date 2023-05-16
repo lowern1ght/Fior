@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using FiorSearchService;
+using Newtonsoft.Json;
 using Pastel;
 
 namespace FiorConsole {
@@ -26,7 +27,7 @@ namespace FiorConsole {
                 ApiKey = "AIzaSyDBRc-mwzyEgSpc0fq1nWbUmKQH_ZOQimY",
                 Cx = "b0edae207179a4dd3",
                 ElementCount = 10,
-            });
+            }, WebDriverType.Edge);
 
             var result = await service.GetReultAsync(answer);
             if (result is null) {
@@ -40,6 +41,11 @@ namespace FiorConsole {
             }
                 
             var pos = await service.GetPossibleAttributesProductAsync(result);
+
+            foreach (var item in pos) {
+                await Console.Out.WriteLineAsync(JsonConvert.SerializeObject(item) + Environment.NewLine);
+            }
+
             service.Dispose();
         }
     }

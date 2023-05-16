@@ -1,41 +1,30 @@
-﻿using System.Collections;
-using CsQuery;
-using CsQuery.ExtensionMethods;
-using FiorSearchService.Entity;
+﻿using FiorSearchService.Entity;
 using FiorSearchService.Interfaces;
-using FiorSearchService.Modules;
 using Google.Apis.CustomSearchAPI.v1;
 using Google.Apis.CustomSearchAPI.v1.Data;
 using Newtonsoft.Json.Linq;
+using HtmlAgilityPack;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Edge;
+using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Firefox;
+using OpenQA.Selenium.Chromium;
 
 namespace FiorSearchService;
 
-public enum WebDriverType {
-    FireFox,
-    Chrome,
-    Edge
-}
-
-public record class GoogleSearch : SearchService, IDisposable {
+public class GoogleSearch : SearchService, IDisposable {
     private IWebDriver WebDriver { get; init; }
     private CustomSearchAPIService CustomSearch { get; init; }
 
-    private readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
-    private const string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
-
-    private void InitializationWebDriver(WebDriverType driverType) {
-
-    }
+    private static readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
+    private static readonly string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
 
     /// <summary> Create component google rest api search service </summary>
     /// <param name="serviceConfig"></param>
     /// <param name="driverType"></param>
     /// <exception cref="ArgumentException"></exception>
     public GoogleSearch(SearchServiceConfig serviceConfig, WebDriverType driverType) : base(serviceConfig) {
+        
         if (driverType == WebDriverType.FireFox) {
             // Firefox =>
             var optionFirefox = new FirefoxOptions() {
@@ -99,11 +88,14 @@ public record class GoogleSearch : SearchService, IDisposable {
             throw new ArgumentException(nameof(WebDriver));
         }
 
+        WebDriver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(8);
+        WebDriver.Manage().Network.ClearAuthenticationHandlers();
+
         // Google API
         CustomSearch = new(
             new Google.Apis.Services.BaseClientService.Initializer() {
                 ApiKey = ServiceConfig.ApiKey,
-        });
+            });
     }
 
     /// <summary>Get item list before search in google service</summary>
@@ -124,6 +116,7 @@ public record class GoogleSearch : SearchService, IDisposable {
 
     public async Task<IEnumerable<PossibleAttributesProduct?>> GetPossibleAttributesProductAsync(IList<Result> items) {
         var result = new List<PossibleAttributesProduct?>();
+
         foreach (var item in items) {
             var possible = await CompletePossibleAttributesProductAsync(item);
             if (possible != null) { result.Add(possible); }
@@ -140,42 +133,57 @@ public record class GoogleSearch : SearchService, IDisposable {
             return null;
         }
 
-        var response = GetResponseHtmlFromWebsite(itemLink);
-        CQ domObjects = new CQ(response);
+        HtmlDocument @document = new HtmlDocument();
+        String siteSource = GetResponseHtmlFromWebsite(itemLink);
+        document.LoadHtml(siteSource);
 
-        //Todo: нахождение propa и изображений
         PossibleAttributesProduct possibleAttributes = new() {
             SiteName   = item.Title,
             WebAddress = uriSite,
-            
         };
 
-        var aboutProduct = await GetAboutProductAsync(domObjects);
-        if (aboutProduct is not null) {
-            possibleAttributes.AboutProduct = aboutProduct.Value;
-        }
+        AboutProduct aboutProduct = await GetAboutProductAsync(document);
+        possibleAttributes.AboutProduct = aboutProduct;
 
         return possibleAttributes;
     }
 
 
-    private async ValueTask<AboutProduct?> GetAboutProductAsync(CQ domObjects) {
-        var result = new AboutProduct() { 
+    private async ValueTask<AboutProduct> GetAboutProductAsync(HtmlDocument @document) {
+        var result = new AboutProduct() {
             Specifity = new Dictionary<string, IConvertible>(),
             Description = new List<string>()
         };
 
-        var @div = domObjects["div"];
-        foreach (var divItem in @div) {
-
+        if (IsProductScheme(document.DocumentNode, out var productNode)) {
+            await Console.Out.WriteLineAsync("Find!");
         }
+        else { }
 
         return result;
     }
 
-    private String? GetResponseHtmlFromWebsite(Uri uriWebsite) {
-        WebDriver.Navigate().GoToUrl(uriWebsite);
-        var resultPage = WebDriver.PageSource;
+    private Boolean IsProductScheme(HtmlNode root, out HtmlNode? productNode) {
+        var finded = root.SelectSingleNode(@".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product']");
+        if (finded is null) {
+            productNode = null;
+            return false;
+        }
+        else {
+            productNode = finded;
+            return true;
+        }
+    }
+
+    private String GetResponseHtmlFromWebsite(Uri uriWebsite) {
+        String resultPage = String.Empty;
+
+        try {
+            WebDriver.Navigate().GoToUrl(uriWebsite);
+            resultPage = WebDriver.PageSource;
+        }
+        catch (Exception) { /* Exception */ }
+
         return resultPage;
     }
 
