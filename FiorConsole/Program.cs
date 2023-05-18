@@ -38,6 +38,7 @@ namespace FiorConsole {
 
             var pos = await service.GetPossibleAttributesProductAsync(result);
 
+            Console.Clear();
             foreach (var item in pos) {
                 await Console.Out.WriteLineAsync(JsonConvert.SerializeObject(item) + Environment.NewLine);
             }

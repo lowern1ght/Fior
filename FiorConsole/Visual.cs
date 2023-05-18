@@ -17,8 +17,8 @@ public static class Visual {
     public static async Task WriteWebsiteAsync(String? siteName, String? uri, String? status = null, WriteWebSiteConfig? webSiteConfig = null) {
         await Console.Out.WriteLineAsync(new String(webSiteConfig?.SymbolToPlace ?? '-', webSiteConfig?.SizePlace ?? 100).Pastel(Color.DimGray));
         
-        if (siteName is not null)   { await Console.Out.WriteLineAsync($" [+] Name:            {siteName.Pastel(Color.Green)}"); }
-        if (uri is not null)        { await Console.Out.WriteLineAsync($" [+] Website URL:     {uri.Pastel(Color.Blue)}"); }
+        if (siteName is not null)   { await Console.Out.WriteLineAsync($" [+] Name:            {siteName.Pastel(Color.LightGreen)}"); }
+        if (uri is not null)        { await Console.Out.WriteLineAsync($" [+] Website URL:     {uri.Pastel(Color.GhostWhite)}"); }
         if (status is not null)     { await Console.Out.WriteLineAsync($" [+] Status:          {status.Pastel(Color.AliceBlue)}"); }
     }
 }

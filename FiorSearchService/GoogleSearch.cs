@@ -12,12 +12,21 @@ using OpenQA.Selenium.Chromium;
 
 namespace FiorSearchService;
 
-public class GoogleSearch : SearchService, IDisposable {
+public sealed class GoogleSearch : SearchService, IDisposable {
+    #region //**** Variable, Const variable ****//
+
     private IWebDriver WebDriver { get; init; }
     private CustomSearchAPIService CustomSearch { get; init; }
+    
+    private TimeSpan TimeOutWebDriver { get; set; } = TimeSpan.FromSeconds(8);
 
     private static readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
     private static readonly string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
+
+
+    #endregion
+
+    #region //**** Constructors ****//
 
     /// <summary> Create component google rest api search service </summary>
     /// <param name="serviceConfig"></param>
@@ -88,7 +97,7 @@ public class GoogleSearch : SearchService, IDisposable {
             throw new ArgumentException(nameof(WebDriver));
         }
 
-        WebDriver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(8);
+        WebDriver.Manage().Timeouts().PageLoad = TimeOutWebDriver;
         WebDriver.Manage().Network.ClearAuthenticationHandlers();
 
         // Google API
@@ -98,6 +107,10 @@ public class GoogleSearch : SearchService, IDisposable {
             });
     }
 
+    #endregion
+
+    #region  //**** Public methods ****//
+    
     /// <summary>Get item list before search in google service</summary>
     /// <param name="textSearch"></param>
     /// <returns></returns>
@@ -119,11 +132,23 @@ public class GoogleSearch : SearchService, IDisposable {
 
         foreach (var item in items) {
             var possible = await CompletePossibleAttributesProductAsync(item);
-            if (possible != null) { result.Add(possible); }
+           if (possible != null) { result.Add(possible); }
         }
 
         return result;
     }
+
+    #region  (Interface)//--- IDisposable ---//
+
+    public void Dispose() {
+        WebDriver?.Dispose();
+    }
+
+    #endregion
+
+    #endregion
+
+    #region //**** Private methods ****//
 
     private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item) {
         if (!Uri.TryCreate(item.FormattedUrl, UriKind.RelativeOrAbsolute, out var uriSite))
@@ -133,8 +158,13 @@ public class GoogleSearch : SearchService, IDisposable {
             return null;
         }
 
-        HtmlDocument @document = new HtmlDocument();
         String siteSource = GetResponseHtmlFromWebsite(itemLink);
+        
+        if (siteSource.Length == 0) {
+            return null;
+        }
+
+        HtmlDocument @document = new HtmlDocument();
         document.LoadHtml(siteSource);
 
         PossibleAttributesProduct possibleAttributes = new() {
@@ -156,23 +186,48 @@ public class GoogleSearch : SearchService, IDisposable {
         };
 
         if (IsProductScheme(document.DocumentNode, out var productNode)) {
-            await Console.Out.WriteLineAsync("Find!");
+
+            //TODO: проверка meta части заголовка страницы
+
+
+
+            var descriptioDivs = productNode?.SelectNodes(@".//*[@itemprop='description']")?.Descendants();
+            if (descriptioDivs is not null) {
+                foreach (var node in descriptioDivs) {
+                    result.Description.Add(GetContentForNode(node));
+                }
+            }
+
+            var nameDivs = productNode?.SelectSingleNode(@".//*[@itemprop='name']")?.Descendants();
+            if (nameDivs is not null) {
+                var rtn = nameDivs.First().GetAttributeValue("content", String.Empty);
+                result.Name =  rtn == String.Empty ? nameDivs.First().InnerText : rtn;
+            }
         }
-        else { }
+
+        else {
+            //Todo: not a scheme product :(
+        }
 
         return result;
     }
 
-    private Boolean IsProductScheme(HtmlNode root, out HtmlNode? productNode) {
-        var finded = root.SelectSingleNode(@".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product']");
-        if (finded is null) {
-            productNode = null;
-            return false;
+    //FIXME: убрать рутовскую ноду из проверки на схему
+    private Boolean IsProductScheme(HtmlNode root, out HtmlNode? finded) {
+        finded = root.SelectSingleNode(@".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product']");
+        return finded is not null;
+    }
+
+    private String GetContentForNode(HtmlNode childNode) {
+        if (childNode.InnerText.Trim().Length != 0) {
+            return childNode.InnerText;
         }
-        else {
-            productNode = finded;
-            return true;
+
+        if (childNode.HasAttributes) {
+            return childNode.GetAttributeValue("content", String.Empty);
         }
+
+        return String.Empty;
     }
 
     private String GetResponseHtmlFromWebsite(Uri uriWebsite) {
@@ -182,7 +237,16 @@ public class GoogleSearch : SearchService, IDisposable {
             WebDriver.Navigate().GoToUrl(uriWebsite);
             resultPage = WebDriver.PageSource;
         }
-        catch (Exception) { /* Exception */ }
+
+        catch (WebDriverException) {
+            return resultPage;
+        }
+
+        catch (Exception e) {
+            //Todo: желательно логировать данную дрянь, но у меня тестовая версия, мне можно
+            Console.WriteLine(e.Message);
+            throw;
+        }
 
         return resultPage;
     }
@@ -190,8 +254,6 @@ public class GoogleSearch : SearchService, IDisposable {
     private Task<IEnumerable<string>> JTokenToStrings(JArray array) {
         throw new NotImplementedException();
     }
-
-    public void Dispose() {
-        WebDriver?.Dispose();
-    }
+    
+    #endregion
 }
