@@ -18,7 +18,7 @@ public sealed class GoogleSearch : SearchService, IDisposable {
     private IWebDriver WebDriver { get; init; }
     private CustomSearchAPIService CustomSearch { get; init; }
     
-    private TimeSpan TimeOutWebDriver { get; set; } = TimeSpan.FromSeconds(8);
+    private TimeSpan TimeOutWebDriver { get; set; } = TimeSpan.FromSeconds(24);
 
     private static readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
     private static readonly string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
@@ -37,6 +37,7 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         if (driverType == WebDriverType.FireFox) {
             // Firefox =>
             var optionFirefox = new FirefoxOptions() {
+                PageLoadStrategy = PageLoadStrategy.Eager,
                 AcceptInsecureCertificates = true,
             };
 
@@ -55,7 +56,7 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         if (driverType == WebDriverType.Chrome) {
             // Google Chrome =>
             var optionChrome = new ChromeOptions() {
-                PageLoadStrategy = PageLoadStrategy.Default,
+                PageLoadStrategy = PageLoadStrategy.Eager,
                 AcceptInsecureCertificates = true
             };
 
@@ -75,6 +76,7 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         if (driverType == WebDriverType.Edge) {
             // Edge =>
             var optionEdge = new EdgeOptions() {
+                PageLoadStrategy = PageLoadStrategy.Eager,
                 AcceptInsecureCertificates = true,
             };
 
@@ -181,27 +183,77 @@ public sealed class GoogleSearch : SearchService, IDisposable {
 
     private async ValueTask<AboutProduct> GetAboutProductAsync(HtmlDocument @document) {
         var result = new AboutProduct() {
-            Specifity = new Dictionary<string, IConvertible>(),
-            Description = new List<string>()
+            Name = new List<String>(),
+            UriImages = new List<String>(),
+            Description = new List<string>(),
+            Specifity = new Dictionary<string, IConvertible>()
         };
 
-        if (IsProductScheme(document.DocumentNode, out var productNode)) {
+        HtmlNode root = document.DocumentNode;
+        var metaTags = root.SelectNodes(@".//meta[@data-hid]");
+        if (metaTags is not null) {
+            foreach (var @mnode in metaTags.Descendants()) {
+                var atributes = mnode.GetAttributes();
+            }
+        }
 
-            //TODO: проверка meta части заголовка страницы
+        var metaStandart = root.SelectNodes(@".//meta[@name]");
+        if (metaStandart is not null) {
+            foreach (var @nodest in metaStandart.Descendants()) {
+                var property = nodest.GetAttributeValue("name", String.Empty);
+                if (!property.Equals(String.Empty)) {
+                    var content = nodest.GetAttributeValue("content", String.Empty);
+                    switch (property) {
+                        case "name":
+                            result.Name.Add(content);
+                            break;
+                        case "description":
+                            result.Description.Add(content);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
 
+        var metaog = root.SelectNodes(@".//meta[@property]");
+        if (metaog is not null) {
+            foreach (var nodeog in metaog.Descendants()) {
+                var property = nodeog.GetAttributeValue("property", String.Empty);
+                if (!property.Equals(String.Empty)) {
 
+                    var content = nodeog.GetAttributeValue("content", String.Empty);
+                    switch (property) {
+                        case "og:title":
+                            result.Name.Add(@content);
+                            break;
+                        case "og:image":
+                            result.UriImages.Add(@content);
+                            break;
+                        case "og:description":
+                            result.Description.Add(@content);
+                            break;
+                        default:
+                            break;
+                    }
 
-            var descriptioDivs = productNode?.SelectNodes(@".//*[@itemprop='description']")?.Descendants();
+                }
+            }
+        }
+
+        if (IsProductScheme(document.DocumentNode)) {
+            var descriptioDivs = root?.SelectNodes(@".//*[@itemprop='description']")?.Descendants();
             if (descriptioDivs is not null) {
                 foreach (var node in descriptioDivs) {
                     result.Description.Add(GetContentForNode(node));
                 }
             }
 
-            var nameDivs = productNode?.SelectSingleNode(@".//*[@itemprop='name']")?.Descendants();
+            var nameDivs = root?.SelectSingleNode(@".//*[@itemprop='name']")?.Descendants();
             if (nameDivs is not null) {
                 var rtn = nameDivs.First().GetAttributeValue("content", String.Empty);
-                result.Name =  rtn == String.Empty ? nameDivs.First().InnerText : rtn;
+                result.Name.Add( rtn == String.Empty ? nameDivs.First().InnerText : rtn);
             }
         }
 
@@ -213,8 +265,8 @@ public sealed class GoogleSearch : SearchService, IDisposable {
     }
 
     //FIXME: убрать рутовскую ноду из проверки на схему
-    private Boolean IsProductScheme(HtmlNode root, out HtmlNode? finded) {
-        finded = root.SelectSingleNode(@".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product']");
+    private Boolean IsProductScheme(HtmlNode root) {
+        var finded = root.SelectSingleNode(@".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product']");
         return finded is not null;
     }
 
