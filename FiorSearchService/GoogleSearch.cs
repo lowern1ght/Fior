@@ -183,85 +183,64 @@ public sealed class GoogleSearch : SearchService, IDisposable {
 
     private async ValueTask<AboutProduct> GetAboutProductAsync(HtmlDocument @document) {
         var result = new AboutProduct() {
-            Name = new List<String>(),
+            Names = new List<String>(),
             UriImages = new List<String>(),
             Description = new List<string>(),
             Specifity = new Dictionary<string, IConvertible>()
         };
 
         HtmlNode root = document.DocumentNode;
-        var metaTags = root.SelectNodes(@".//meta[@data-hid]");
-        if (metaTags is not null) {
-            foreach (var @mnode in metaTags.Descendants()) {
-                var atributes = mnode.GetAttributes();
-            }
-        }
 
-        var metaStandart = root.SelectNodes(@".//meta[@name]");
-        if (metaStandart is not null) {
-            foreach (var @nodest in metaStandart.Descendants()) {
-                var property = nodest.GetAttributeValue("name", String.Empty);
-                if (!property.Equals(String.Empty)) {
-                    var content = nodest.GetAttributeValue("content", String.Empty);
+        //Сначала проходим по Open Graphs
+        var meta = root.SelectNodes(@"//meta");
+        if (meta is not null) {
+            Parallel.ForEach(meta, (HtmlNode n) => {
+                if (n.GetAttributeValue("property", null) is String property) {
                     switch (property) {
-                        case "name":
-                            result.Name.Add(content);
-                            break;
-                        case "description":
-                            result.Description.Add(content);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        }
-
-        var metaog = root.SelectNodes(@".//meta[@property]");
-        if (metaog is not null) {
-            foreach (var nodeog in metaog.Descendants()) {
-                var property = nodeog.GetAttributeValue("property", String.Empty);
-                if (!property.Equals(String.Empty)) {
-
-                    var content = nodeog.GetAttributeValue("content", String.Empty);
-                    switch (property) {
-                        case "og:title":
-                            result.Name.Add(@content);
+                        case "og:description":
+                            result.Description.Add(n.GetAttributeValue("content", String.Empty));
                             break;
                         case "og:image":
-                            result.UriImages.Add(@content);
+                            result.UriImages.Add(n.GetAttributeValue("content", String.Empty));
                             break;
-                        case "og:description":
-                            result.Description.Add(@content);
+                        case "og:title":
+                            result.Names.Add(n.GetAttributeValue("content", String.Empty));
                             break;
                         default:
                             break;
                     }
+                }
+            });
+        }
 
+        var elementsDesciptions = root.SelectNodes(@"//*[@name='description' | @property='description']");
+        if (elementsDesciptions is not null) {
+            foreach (var item in elementsDesciptions) {
+                if (item.GetAttributeValue("content", null) is String cnt) {
+                    result.Description.Add(cnt);
                 }
             }
         }
 
-        if (IsProductScheme(document.DocumentNode)) {
-            var descriptioDivs = root?.SelectNodes(@".//*[@itemprop='description']")?.Descendants();
-            if (descriptioDivs is not null) {
-                foreach (var node in descriptioDivs) {
-                    result.Description.Add(GetContentForNode(node));
-                }
-            }
+        if (IsProductScheme(root)) {
+            var ds = root.SelectNodes(@"//*[@itemprop='description']");
+            if (ds is not null) { AddSelectedNodes(ds, result.Description); }
 
-            var nameDivs = root?.SelectSingleNode(@".//*[@itemprop='name']")?.Descendants();
-            if (nameDivs is not null) {
-                var rtn = nameDivs.First().GetAttributeValue("content", String.Empty);
-                result.Name.Add( rtn == String.Empty ? nameDivs.First().InnerText : rtn);
-            }
-        }
+            var imgs = root.SelectNodes(@"//*[@itemprop='image']");
+            if (imgs is not null) { AddSelectedNodes(imgs, result.UriImages); }
 
-        else {
-            //Todo: not a scheme product :(
+            var brds = root.SelectNodes(@"//*[@itemprop='brand']");
+            if (brds is not null) { AddSelectedNodes(brds, result.Brands); }
         }
 
         return result;
+    }
+
+    private void AddSelectedNodes(IEnumerable<HtmlNode> collection, IList<String> addCollection, String propertyName = "content") {
+        foreach (var item in collection) {
+            if (item.GetAttributeValue(propertyName, null) is String cnt)
+                addCollection.Add(cnt);
+        }
     }
 
     //FIXME: убрать рутовскую ноду из проверки на схему
