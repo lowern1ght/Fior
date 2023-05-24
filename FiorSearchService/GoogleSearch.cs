@@ -13,20 +13,13 @@ using OpenQA.Selenium.Chromium;
 namespace FiorSearchService;
 
 public sealed class GoogleSearch : SearchService, IDisposable {
-    #region //**** Variable, Const variable ****//
-
     private IWebDriver WebDriver { get; init; }
     private CustomSearchAPIService CustomSearch { get; init; }
     
     private TimeSpan TimeOutWebDriver { get; set; } = TimeSpan.FromSeconds(24);
 
-    private static readonly string[] ExtensionImage = new string[] { ".jpeg", ".png", ".jpg" };
+    private static readonly string[] ExtensionImage = { ".jpeg", ".png", ".jpg" };
     private static readonly string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
-
-
-    #endregion
-
-    #region //**** Constructors ****//
 
     /// <summary> Create component google rest api search service </summary>
     /// <param name="serviceConfig"></param>
@@ -108,10 +101,6 @@ public sealed class GoogleSearch : SearchService, IDisposable {
                 ApiKey = ServiceConfig.ApiKey,
             });
     }
-
-    #endregion
-
-    #region  //**** Public methods ****//
     
     /// <summary>Get item list before search in google service</summary>
     /// <param name="textSearch"></param>
@@ -140,17 +129,9 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         return result;
     }
 
-    #region  (Interface)//--- IDisposable ---//
-
     public void Dispose() {
         WebDriver?.Dispose();
     }
-
-    #endregion
-
-    #endregion
-
-    #region //**** Private methods ****//
 
     private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item) {
         if (!Uri.TryCreate(item.FormattedUrl, UriKind.RelativeOrAbsolute, out var uriSite))
@@ -285,6 +266,4 @@ public sealed class GoogleSearch : SearchService, IDisposable {
     private Task<IEnumerable<string>> JTokenToStrings(JArray array) {
         throw new NotImplementedException();
     }
-    
-    #endregion
 }
