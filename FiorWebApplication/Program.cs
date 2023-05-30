@@ -1,41 +1,22 @@
-using FiorWebApplication.Data;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+namespace FiorWebApplication;
 
-var builder = WebApplication.CreateBuilder(args);
+public static class Program {
+    private static void Main(string[] args) {
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+        
+        builder.Services.AddRazorPages();
+        builder.Services.AddMvc();
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                       throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+        WebApplication app = builder.Build();
+        
+        app.UseStaticFiles();
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
-builder.Services.AddControllersWithViews();
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment()) {
-    app.UseMigrationsEndPoint();
+        if (!app.Environment.IsDevelopment()) {
+            app.UseExceptionHandler("/Error");
+            app.UseHsts();
+        }
+        
+        app.MapGet("/", () => "Hello World!");
+        app.Run();
+    }
 }
-
-else  {
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthorization();
-
-app.MapControllerRoute(
-    "default",
-    "{controller=Home}/{action=Index}/{id?}");
-app.MapRazorPages();
-
-app.Run();
