@@ -2,6 +2,8 @@
 
 public enum LogType {
     Errored,
+
     Debug,
+
     Info,
 }

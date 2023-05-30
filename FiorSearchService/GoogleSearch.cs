@@ -1,35 +1,38 @@
-﻿using FiorSearchService.Entity;
-using FiorSearchService.Interfaces;
+﻿namespace FiorSearchService;
+
+using Entity;
 using Google.Apis.CustomSearchAPI.v1;
 using Google.Apis.CustomSearchAPI.v1.Data;
-using Newtonsoft.Json.Linq;
+using Google.Apis.Services;
 using HtmlAgilityPack;
+using Interfaces;
+using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
-using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Edge;
 using OpenQA.Selenium.Firefox;
-using OpenQA.Selenium.Chromium;
 
-namespace FiorSearchService;
-
-public sealed class GoogleSearch : SearchService, IDisposable {
-    private IWebDriver WebDriver { get; init; }
-    private CustomSearchAPIService CustomSearch { get; init; }
+public sealed class GoogleSearch : SearchService, IDisposable 
+{
+    private readonly static string XPathScheme = @".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product'] or ";
     
-    private TimeSpan TimeOutWebDriver { get; set; } = TimeSpan.FromSeconds(24);
+    private readonly static string[] ExtensionImage = {
+        ".jpeg", ".png", ".jpg",
+    };
 
-    private static readonly string[] ExtensionImage = { ".jpeg", ".png", ".jpg" };
-    private static readonly string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
+    public readonly static string PatternImgSrc = @"<img\s[^>]*?src\s*=\s*['\""]([^'\""]*?)['\""][^>]*?>";
 
     /// <summary> Create component google rest api search service </summary>
     /// <param name="serviceConfig"></param>
     /// <param name="driverType"></param>
     /// <exception cref="ArgumentException"></exception>
-    public GoogleSearch(SearchServiceConfig serviceConfig, WebDriverType driverType) : base(serviceConfig) {
-        
-        if (driverType == WebDriverType.FireFox) {
+    public GoogleSearch(SearchServiceConfig serviceConfig, WebDriverType driverType) : base(serviceConfig)
+    {
+
+        if (driverType == WebDriverType.FireFox)
+        {
             // Firefox =>
-            var optionFirefox = new FirefoxOptions() {
+            var optionFirefox = new FirefoxOptions {
                 PageLoadStrategy = PageLoadStrategy.Eager,
                 AcceptInsecureCertificates = true,
             };
@@ -46,11 +49,12 @@ public sealed class GoogleSearch : SearchService, IDisposable {
             WebDriver = new FirefoxDriver(serviceFirefox, optionFirefox);
         }
 
-        if (driverType == WebDriverType.Chrome) {
+        if (driverType == WebDriverType.Chrome)
+        {
             // Google Chrome =>
-            var optionChrome = new ChromeOptions() {
+            var optionChrome = new ChromeOptions {
                 PageLoadStrategy = PageLoadStrategy.Eager,
-                AcceptInsecureCertificates = true
+                AcceptInsecureCertificates = true,
             };
 
             var serviceChrome = ChromeDriverService.CreateDefaultService();
@@ -66,9 +70,10 @@ public sealed class GoogleSearch : SearchService, IDisposable {
             WebDriver = new ChromeDriver(serviceChrome, optionChrome);
         }
 
-        if (driverType == WebDriverType.Edge) {
+        if (driverType == WebDriverType.Edge)
+        {
             // Edge =>
-            var optionEdge = new EdgeOptions() {
+            var optionEdge = new EdgeOptions {
                 PageLoadStrategy = PageLoadStrategy.Eager,
                 AcceptInsecureCertificates = true,
             };
@@ -88,7 +93,8 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         }
 
         //Без WebDriver'a запускать бессмысленно...
-        if (WebDriver is null) {
+        if (WebDriver is null)
+        {
             throw new ArgumentException(nameof(WebDriver));
         }
 
@@ -96,98 +102,120 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         WebDriver.Manage().Network.ClearAuthenticationHandlers();
 
         // Google API
-        CustomSearch = new(
-            new Google.Apis.Services.BaseClientService.Initializer() {
-                ApiKey = ServiceConfig.ApiKey,
-            });
+        CustomSearch = new CustomSearchAPIService(
+        new BaseClientService.Initializer {
+            ApiKey = ServiceConfig.ApiKey,
+        });
     }
-    
+    private IWebDriver WebDriver { get; init; }
+    private CustomSearchAPIService CustomSearch { get; }
+
+    private TimeSpan TimeOutWebDriver { get; } = TimeSpan.FromSeconds(24);
+
+    public void Dispose()
+    {
+        WebDriver?.Dispose();
+    }
+
     /// <summary>Get item list before search in google service</summary>
     /// <param name="textSearch"></param>
     /// <returns></returns>
     /// <exception cref="ArgumentNullException"></exception>
-    public override async Task<IList<Result>?> GetResultAsync(string textSearch) {
+    public override async Task<IList<Result>?> GetResultAsync(string textSearch)
+    {
         var listRequare = CustomSearch.Cse.List();
         listRequare.Num = ServiceConfig.ElementCount;
         listRequare.Cx = ServiceConfig.Cx ?? throw new ArgumentNullException(nameof(ServiceConfig.Cx));
         listRequare.Q = textSearch;
 
         var result = await listRequare.ExecuteAsync();
+
         if (result is null)
+        {
             throw new ArgumentNullException(nameof(result));
+        }
+
         return result.Items;
     }
 
-    public async Task<IEnumerable<PossibleAttributesProduct?>> GetPossibleAttributesProductAsync(IList<Result> items) {
+    public async Task<IEnumerable<PossibleAttributesProduct?>> GetPossibleAttributesProductAsync(IList<Result> items)
+    {
         var result = new List<PossibleAttributesProduct?>();
 
-        foreach (var item in items) {
+        foreach (var item in items)
+        {
             var possible = await CompletePossibleAttributesProductAsync(item);
-           if (possible != null) { result.Add(possible); }
+
+            if (possible != null) { result.Add(possible); }
         }
 
         return result;
     }
 
-    public void Dispose() {
-        WebDriver?.Dispose();
-    }
-
-    private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item) {
+    private async Task<PossibleAttributesProduct?> CompletePossibleAttributesProductAsync(Result item)
+    {
         if (!Uri.TryCreate(item.FormattedUrl, UriKind.RelativeOrAbsolute, out var uriSite))
-            return null;
-
-        if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out var itemLink) && itemLink is null) {
+        {
             return null;
         }
 
-        String siteSource = GetResponseHtmlFromWebsite(itemLink);
-        
-        if (siteSource.Length == 0) {
+        if (!Uri.TryCreate(item.Link, UriKind.RelativeOrAbsolute, out var itemLink) && itemLink is null)
+        {
             return null;
         }
 
-        HtmlDocument @document = new HtmlDocument();
+        string siteSource = GetResponseHtmlFromWebsite(itemLink);
+
+        if (siteSource.Length == 0)
+        {
+            return null;
+        }
+
+        var document = new HtmlDocument();
         document.LoadHtml(siteSource);
 
-        PossibleAttributesProduct possibleAttributes = new() {
-            SiteName   = item.Title,
+        PossibleAttributesProduct possibleAttributes = new PossibleAttributesProduct {
+            SiteName = item.Title,
             WebAddress = uriSite,
         };
 
-        AboutProduct aboutProduct = await GetAboutProductAsync(document);
+        var aboutProduct = await GetAboutProductAsync(document);
         possibleAttributes.AboutProduct = aboutProduct;
 
         return possibleAttributes;
     }
 
 
-    private async ValueTask<AboutProduct> GetAboutProductAsync(HtmlDocument @document) {
-        var result = new AboutProduct() {
-            Names = new List<String>(),
-            UriImages = new List<String>(),
+    private async ValueTask<AboutProduct> GetAboutProductAsync(HtmlDocument document)
+    {
+        var result = new AboutProduct {
+            Names = new List<string>(),
+            UriImages = new List<string>(),
             Description = new List<string>(),
-            Specifity = new Dictionary<string, IConvertible>()
+            Specifity = new Dictionary<string, IConvertible>(),
         };
 
-        HtmlNode root = document.DocumentNode;
+        var root = document.DocumentNode;
 
         //Сначала проходим по Open Graphs
         var meta = root.SelectNodes(@"//meta");
-        if (meta is not null) {
-            Parallel.ForEach(meta, (HtmlNode n) => {
-                if (n.GetAttributeValue("property", null) is String property) {
-                    switch (property) {
+
+        if (meta is not null)
+        {
+            Parallel.ForEach(meta,
+            body: n => {
+                if (n.GetAttributeValue("property", def: null) is {} property)
+                {
+                    switch (property)
+                    {
                         case "og:description":
-                            result.Description.Add(n.GetAttributeValue("content", String.Empty));
+                            result.Description.Add(n.GetAttributeValue("content", string.Empty));
                             break;
                         case "og:image":
-                            result.UriImages.Add(n.GetAttributeValue("content", String.Empty));
+                            result.UriImages.Add(n.GetAttributeValue("content", string.Empty));
                             break;
                         case "og:title":
-                            result.Names.Add(n.GetAttributeValue("content", String.Empty));
-                            break;
-                        default:
+                            result.Names.Add(n.GetAttributeValue("content", string.Empty));
                             break;
                     }
                 }
@@ -195,66 +223,86 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         }
 
         var elementsDesciptions = root.SelectNodes(@"//*[@name='description' | @property='description']");
-        if (elementsDesciptions is not null) {
-            foreach (var item in elementsDesciptions) {
-                if (item.GetAttributeValue("content", null) is String cnt) {
+
+        if (elementsDesciptions is not null)
+        {
+            foreach (var item in elementsDesciptions)
+            {
+                if (item.GetAttributeValue("content", def: null) is {} cnt)
+                {
                     result.Description.Add(cnt);
                 }
             }
         }
 
-        if (IsProductScheme(root)) {
+        if (IsProductScheme(root))
+        {
             var ds = root.SelectNodes(@"//*[@itemprop='description']");
+
             if (ds is not null) { AddSelectedNodes(ds, result.Description); }
 
             var imgs = root.SelectNodes(@"//*[@itemprop='image']");
+
             if (imgs is not null) { AddSelectedNodes(imgs, result.UriImages); }
 
             var brds = root.SelectNodes(@"//*[@itemprop='brand']");
+
             if (brds is not null) { AddSelectedNodes(brds, result.Brands); }
         }
 
         return result;
     }
 
-    private void AddSelectedNodes(IEnumerable<HtmlNode> collection, IList<String> addCollection, String propertyName = "content") {
-        foreach (var item in collection) {
-            if (item.GetAttributeValue(propertyName, null) is String cnt)
+    private void AddSelectedNodes(IEnumerable<HtmlNode> collection, IList<string> addCollection, string propertyName = "content")
+    {
+        foreach (var item in collection)
+        {
+            if (item.GetAttributeValue(propertyName, def: null) is {} cnt)
+            {
                 addCollection.Add(cnt);
+            }
         }
     }
 
     //FIXME: убрать рутовскую ноду из проверки на схему
-    private Boolean IsProductScheme(HtmlNode root) {
-        var finded = root.SelectSingleNode(@".//*[@itemtype='http://schema.org/Product' or @itemscope='http://schema.org/Product']");
-        return finded is not null;
+    private bool IsProductScheme(HtmlNode root)
+    {
+        HtmlNode found = root.SelectSingleNode(XPathScheme);
+        return found is {};
     }
 
-    private String GetContentForNode(HtmlNode childNode) {
-        if (childNode.InnerText.Trim().Length != 0) {
+    private string GetContentForNode(HtmlNode childNode)
+    {
+        if (childNode.InnerText.Trim().Length != 0)
+        {
             return childNode.InnerText;
         }
 
-        if (childNode.HasAttributes) {
-            return childNode.GetAttributeValue("content", String.Empty);
+        if (childNode.HasAttributes)
+        {
+            return childNode.GetAttributeValue("content", string.Empty);
         }
 
-        return String.Empty;
+        return string.Empty;
     }
 
-    private String GetResponseHtmlFromWebsite(Uri uriWebsite) {
-        String resultPage = String.Empty;
+    private string GetResponseHtmlFromWebsite(Uri uriWebsite)
+    {
+        string resultPage = string.Empty;
 
-        try {
+        try
+        {
             WebDriver.Navigate().GoToUrl(uriWebsite);
             resultPage = WebDriver.PageSource;
         }
 
-        catch (WebDriverException) {
+        catch (WebDriverException)
+        {
             return resultPage;
         }
 
-        catch (Exception e) {
+        catch (Exception e)
+        {
             //Todo: желательно логировать данную дрянь, но у меня тестовая версия, мне можно
             Console.WriteLine(e.Message);
             throw;
@@ -263,7 +311,8 @@ public sealed class GoogleSearch : SearchService, IDisposable {
         return resultPage;
     }
 
-    private Task<IEnumerable<string>> JTokenToStrings(JArray array) {
+    private Task<IEnumerable<string>> JTokenToStrings(JArray array)
+    {
         throw new NotImplementedException();
     }
 }

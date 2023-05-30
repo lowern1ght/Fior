@@ -2,6 +2,8 @@
 
 public enum WebDriverType {
     FireFox,
+
     Chrome,
-    Edge
+
+    Edge,
 }
