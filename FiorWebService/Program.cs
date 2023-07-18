@@ -1,3 +1,5 @@
+using FiorSearchService;
+
 namespace FiorWebService; 
 
 static class Program 
@@ -24,6 +26,8 @@ static class Program
 
         app.UseHttpsRedirection();
 
+        app.UseStaticFiles();
+        
         app.UseAuthorization();
 
         app.MapRazorPages();
