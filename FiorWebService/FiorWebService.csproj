@@ -14,4 +14,8 @@
       <ProjectReference Include="..\FiorSearchService\FiorSearchService.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="wwwroot" />
+    </ItemGroup>
+
 </Project>

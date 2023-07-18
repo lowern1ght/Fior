@@ -7,7 +7,11 @@ static class Program
         var builder = WebApplication.CreateBuilder(args);
         
         builder.Services.AddControllers();
+
+        builder.Services.AddRazorPages();
+        
         builder.Services.AddEndpointsApiExplorer();
+        
         builder.Services.AddSwaggerGen();
 
         var app = builder.Build();
@@ -22,6 +26,8 @@ static class Program
 
         app.UseAuthorization();
 
+        app.MapRazorPages();
+        
         app.MapControllers();
 
         app.Run();
