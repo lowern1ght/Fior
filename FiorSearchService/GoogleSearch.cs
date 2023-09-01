@@ -26,7 +26,8 @@ public sealed class GoogleSearch : SearchService, IDisposable
     /// <param name="serviceConfig"></param>
     /// <param name="driverType"></param>
     /// <exception cref="ArgumentException"></exception>
-    public GoogleSearch(SearchServiceConfig serviceConfig, WebDriverType driverType) : base(serviceConfig)
+    public GoogleSearch(SearchServiceConfig serviceConfig, WebDriverType driverType) 
+        : base(serviceConfig)
     {
 
         if (driverType == WebDriverType.FireFox)

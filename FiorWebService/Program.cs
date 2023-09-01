@@ -1,39 +1,24 @@
-using FiorSearchService;
+var builder = WebApplication.CreateBuilder(args);
+        
+builder.Services.AddControllers();
 
-namespace FiorWebService; 
+builder.Services.AddEndpointsApiExplorer();
+        
+builder.Services.AddSwaggerGen();
 
-static class Program 
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
 {
-    public static void Main(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);
-        
-        builder.Services.AddControllers();
-
-        builder.Services.AddRazorPages();
-        
-        builder.Services.AddEndpointsApiExplorer();
-        
-        builder.Services.AddSwaggerGen();
-
-        var app = builder.Build();
-
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
-
-        app.UseHttpsRedirection();
-
-        app.UseStaticFiles();
-        
-        app.UseAuthorization();
-
-        app.MapRazorPages();
-        
-        app.MapControllers();
-
-        app.Run();
-    }
+    app.UseSwagger();
+    
+    app.UseSwaggerUI();
 }
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
+app.MapControllers();
+
+app.Run();
